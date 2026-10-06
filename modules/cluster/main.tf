@@ -1,3 +1,16 @@
+resource "aws_key_pair" "cluster" {
+  count = var.create_ssh_key ? 1 : 0
+
+  key_name   = var.ssh_key_name
+  public_key = var.ssh_public_key != null ? trimspace(var.ssh_public_key) : null
+
+  tags = merge(local.common_tags, {
+    Name = var.ssh_key_name
+  })
+}
+
+# EC2 nodes are intentionally kept in this entry-point file. Supporting
+# network, IAM and security resources are split by responsibility.
 resource "aws_instance" "control_plane" {
   ami           = var.ami_id
   instance_type = var.control_plane_instance_type
@@ -5,7 +18,7 @@ resource "aws_instance" "control_plane" {
   private_ip    = var.control_plane_private_ip
 
   vpc_security_group_ids      = [aws_security_group.nodes.id]
-  key_name                    = var.ssh_key_name
+  key_name                    = local.key_name
   iam_instance_profile        = aws_iam_instance_profile.nodes.name
   associate_public_ip_address = true
 
@@ -42,7 +55,7 @@ resource "aws_instance" "worker" {
   subnet_id     = aws_subnet.public[(count.index + 1) % length(aws_subnet.public)].id
 
   vpc_security_group_ids      = [aws_security_group.nodes.id]
-  key_name                    = var.ssh_key_name
+  key_name                    = local.key_name
   iam_instance_profile        = aws_iam_instance_profile.nodes.name
   associate_public_ip_address = true
 

@@ -31,8 +31,26 @@ variable "allowed_admin_cidrs" {
   }
 }
 variable "ssh_key_name" {
-  description = "Existing EC2 key pair name used for break-glass SSH access."
+  description = "EC2 key pair name. Terraform creates it when create_ssh_key is true."
   type        = string
+}
+variable "create_ssh_key" {
+  description = "Create the EC2 key pair from ssh_public_key."
+  type        = bool
+  default     = true
+}
+variable "ssh_public_key" {
+  description = "OpenSSH-format public key used when create_ssh_key is true."
+  type        = string
+  default     = null
+
+  validation {
+    condition = (
+      !var.create_ssh_key ||
+      (var.ssh_public_key != null && can(regex("^ssh-(rsa|ed25519)\\s+", trimspace(var.ssh_public_key))))
+    )
+    error_message = "ssh_public_key must be a valid ssh-rsa or ssh-ed25519 public key when create_ssh_key is true."
+  }
 }
 variable "ami_id" {
   description = "Ubuntu AMI used by all cluster nodes."
